@@ -60,7 +60,7 @@ public final class WifiAddress {
                 }
             }
         } catch (Exception ex) {
-            Log.e("----->" + "NetInfoManager", "getMacAddress:" + ex.toString());
+            FDLog.e("----->" + "NetInfoManager", "getMacAddress:" + ex.toString());
         }
         if (macSerial == null || "".equals(macSerial)) {
             try {
@@ -83,15 +83,15 @@ public final class WifiAddress {
 
 
     private static String getMacAddress0(Context context) {
-        WifiManager wifiMgr = (WifiManager) context
-                .getSystemService(Context.WIFI_SERVICE);
-        WifiInfo wifiInfo = null;
-        try {
-            wifiInfo = wifiMgr.getConnectionInfo();
-            return wifiInfo.getMacAddress();
-        } catch (Exception e) {
-            Log.e("----->" + "NetInfoManager", "getMacAddress0:" + e.toString());
-        }
+//        WifiManager wifiMgr = (WifiManager) context
+//                .getSystemService(Context.WIFI_SERVICE);
+//        WifiInfo wifiInfo = null;
+//        try {
+//            wifiInfo = wifiMgr.getConnectionInfo();
+//            return wifiInfo.getMacAddress();
+//        } catch (Exception e) {
+//            FDLog.e("----->" + "NetInfoManager", "getMacAddress0:" + e.toString());
+//        }
 
         return "";
 
@@ -134,7 +134,7 @@ public final class WifiAddress {
                 Enumeration<InetAddress> en_ip = ni.getInetAddresses();//得到一个ip地址的列举
                 while (en_ip.hasMoreElements()) {
                     ip = en_ip.nextElement();
-                    if (!ip.isLoopbackAddress() && ip.getHostAddress().indexOf(":") == -1)
+                    if (!ip.isLoopbackAddress() && !ip.getHostAddress().contains(":"))
                         break;
                     else
                         ip = null;
@@ -165,7 +165,7 @@ public final class WifiAddress {
                         .getInetAddresses(); enumIpAddr.hasMoreElements(); ) {
                     InetAddress inetAddress = enumIpAddr.nextElement();
                     if (!inetAddress.isLoopbackAddress()) {
-                        return inetAddress.getHostAddress().toString();
+                        return inetAddress.getHostAddress();
                     }
                 }
             }
@@ -186,7 +186,7 @@ public final class WifiAddress {
             //获得IpD地址
             InetAddress ip = getLocalInetAddress();
             byte[] b = NetworkInterface.getByInetAddress(ip).getHardwareAddress();
-            StringBuffer buffer = new StringBuffer();
+            StringBuilder buffer = new StringBuilder();
             for (int i = 0; i < b.length; i++) {
                 if (i != 0) {
                     buffer.append(':');
@@ -196,7 +196,7 @@ public final class WifiAddress {
             }
             strMacAddr = buffer.toString().toUpperCase();
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
 
         return strMacAddr;
@@ -214,9 +214,10 @@ public final class WifiAddress {
             interfaces = NetworkInterface.getNetworkInterfaces();
         } catch (SocketException e) {
             e.printStackTrace();
+            return "";
         }
         String hardWareAddress = null;
-        NetworkInterface iF = null;
+        NetworkInterface iF;
         while (interfaces.hasMoreElements()) {
             iF = interfaces.nextElement();
             try {

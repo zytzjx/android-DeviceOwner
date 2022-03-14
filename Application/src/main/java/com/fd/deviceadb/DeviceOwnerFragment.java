@@ -20,14 +20,13 @@ import android.app.Activity;
 import android.app.admin.DevicePolicyManager;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.UserManager;
 import android.provider.Settings;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.util.Log;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -68,7 +67,7 @@ public class DeviceOwnerFragment extends Fragment {
 
     @Override
     public void onAttach(Context context) {
-        Log.d("FDIAL","onAttach");
+        FDLog.d("FDIAL","onAttach");
         super.onAttach(context);
         mDevicePolicyManager =
                 (DevicePolicyManager) context.getSystemService(Activity.DEVICE_POLICY_SERVICE);

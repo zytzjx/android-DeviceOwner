@@ -8,21 +8,19 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.PersistableBundle;
 import android.provider.Settings;
+import androidx.core.app.ActivityCompat;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
-import android.util.Log;
 import android.widget.Toast;
 
 import org.json.JSONObject;
 
 import java.io.DataOutputStream;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -30,14 +28,18 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import javax.net.ssl.HttpsURLConnection;
+
+
 import static com.fd.deviceadb.DeviceOwnerReceiver.getComponentName;
 
 public class InfoService extends Service {
-    String mSite="88";
-    String mCompany="67";
-    String mNFCID="00051";
+    String mSite = "88";
+    String mCompany = "67";
+    String mNFCID = "00051";
     public static final String USER_SETUP_COMPLETE = "user_setup_complete";
     final InfoService cntxt = InfoService.this;
+    final String TAG = "InfoService";
 
     public InfoService() {
     }
@@ -59,24 +61,23 @@ public class InfoService extends Service {
             mNFCID = extras.getString("nfid", "");
         }
         Toast.makeText(this, "start service", Toast.LENGTH_LONG).show();
-
+        FDLog.d("new ReportInfo().execute   ");
         new ReportInfo().execute("");
         return super.onStartCommand(intent, flags, startId);
     }
 
-    private void StartHome(Context context)
-    {
+    private void StartHome(Context context) {
         try {
             Intent localIntent = new Intent(Intent.ACTION_MAIN);
             localIntent.addCategory(Intent.CATEGORY_HOME);
             localIntent.setFlags(Intent.FLAG_RECEIVER_FOREGROUND);
             context.startActivity(localIntent);
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
-    public static boolean CheckPackageExist(String paname, Context context)
-    {
+
+    public static boolean CheckPackageExist(String paname, Context context) {
         try {
             PackageManager pm = context.getPackageManager();
             List<ApplicationInfo> applications = pm.getInstalledApplications(0);
@@ -84,23 +85,23 @@ public class InfoService extends Service {
                 if (appInfo.packageName.equalsIgnoreCase(paname))
                     return true;
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return false;
     }
 
-    public boolean containsCaseInsensitive(String s, List<String> l){
-        for (String string : l){
-            if (string.equalsIgnoreCase(s)){
+    public boolean containsCaseInsensitive(String s, List<String> l) {
+        for (String string : l) {
+            if (string.equalsIgnoreCase(s)) {
                 return true;
             }
         }
         return false;
     }
 
-    static List<String> GetPakageList(Context paramContext){
-        List<String> packages = new ArrayList<String>();
+    static List<String> GetPakageList(Context paramContext) {
+        List<String> packages = new ArrayList<>();
 
         try {
             PackageManager pm = paramContext.getPackageManager();
@@ -108,27 +109,34 @@ public class InfoService extends Service {
             for (ApplicationInfo appInfo : applications) {
                 packages.add(appInfo.packageName);
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
         return packages;
     }
 
-    public void setAppHidden(Context context)
-    {
+
+    public void setAppHidden(Context context) {
         DevicePolicyManager manager = (DevicePolicyManager) context.getSystemService(Context.DEVICE_POLICY_SERVICE);
         ComponentName componentName = DeviceOwnerReceiver.getComponentName(context);
 
 
         List<String> packages = GetPakageList(context);
         try {
+            if (containsCaseInsensitive("com.motorola.android.provisioning", packages))
+                manager.setApplicationHidden(componentName, "com.motorola.android.provisioning", true);
             if (containsCaseInsensitive("com.google.android.setupwizard", packages))
                 manager.setApplicationHidden(componentName, "com.google.android.setupwizard", true);
+            if (containsCaseInsensitive("com.motorola.vzw.cloudsetup", packages))
+                manager.setApplicationHidden(componentName, "com.motorola.vzw.cloudsetup", true);
+            if (containsCaseInsensitive("com.motorola.motocare", packages))
+                manager.setApplicationHidden(componentName, "com.motorola.motocare", true);
             if (containsCaseInsensitive("com.sec.android.app.SecSetupWizard", packages))
                 manager.setApplicationHidden(componentName, "com.sec.android.app.SecSetupWizard", true);
             if (containsCaseInsensitive("com.sec.android.app.setupwizard", packages))
                 manager.setApplicationHidden(componentName, "com.sec.android.app.setupwizard", true);
+
             if (containsCaseInsensitive("com.android.LGSetupWizard", packages))
                 manager.setApplicationHidden(componentName, "com.android.LGSetupWizard", true);
             if (containsCaseInsensitive("com.android.setupwizard", packages))
@@ -137,94 +145,78 @@ public class InfoService extends Service {
                 manager.setApplicationHidden(componentName, "com.sec.android.app.easylauncher", true);
             if (containsCaseInsensitive("com.samsung.enhanceservice", packages))
                 manager.setApplicationHidden(componentName, "com.samsung.enhanceservice", true);
-            if (containsCaseInsensitive("com.sec.android.app.setupwizard", packages))
-                manager.setApplicationHidden(componentName, "com.sec.android.app.setupwizard", true);
-            if (containsCaseInsensitive("com.google.android.setupwizard", packages))
-                manager.setApplicationHidden(componentName, "com.google.android.setupwizard", true);
+            if (containsCaseInsensitive("com.samsung.android.incallui", packages))
+                manager.setApplicationHidden(componentName, "com.samsung.android.incallui", true);
             if (containsCaseInsensitive("com.lge.LGSetupView", packages))
                 manager.setApplicationHidden(componentName, "com.lge.LGSetupView", true);
-            if (containsCaseInsensitive("com.sec.android.app.setupwizard", packages))
-                manager.setApplicationHidden(componentName, "com.sec.android.app.setupwizard", true);
-            if (containsCaseInsensitive("com.google.android.setupwizard", packages))
-                manager.setApplicationHidden(componentName, "com.google.android.setupwizard", true);
-            if (containsCaseInsensitive("com.samsung.android.incallui", packages))
-                manager.setApplicationHidden(componentName, " com.samsung.android.incallui", true);
+
             if (containsCaseInsensitive("com.samsung.huxextension", packages))
                 manager.setApplicationHidden(componentName, "com.samsung.huxextension", true);
-            if (containsCaseInsensitive("com.google.android.setupwizard", packages))
-                manager.setApplicationHidden(componentName, "com.google.android.setupwizard", true);
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
-        if (Build.VERSION.SDK_INT > 20)
-        {
-            try {
-                ActivityManager localActivityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-                String procName = "";
-                if (localActivityManager != null) {
-
-                    if (localActivityManager.getRunningAppProcesses() != null)
-                        procName = ((ActivityManager.RunningAppProcessInfo) localActivityManager.getRunningAppProcesses().get(0)).processName;
+        String manufacturer = Build.MANUFACTURER;
+        if (!TextUtils.isEmpty(manufacturer) && !manufacturer.equalsIgnoreCase("google")) {
+            if (Build.VERSION.SDK_INT > 20) {
+                String mPackageName = null;
+                ActivityManager mActivityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+                if (mActivityManager != null && mActivityManager.getRunningAppProcesses() != null) {
+                    mPackageName = mActivityManager.getRunningAppProcesses().get(0).processName;
                 }
-                if ((procName != null) && (!procName.contains("launcher")))
-                    manager.setApplicationHidden(componentName, procName, true);
-            }catch (Exception e){
-                e.printStackTrace();
+                if (mPackageName != null && !mPackageName.contains("launcher")) {
+                    manager.setApplicationHidden(componentName, mPackageName, true);
+                }
             }
         }
     }
 
-
-    public  void SetAdbEnabled()
-    {
+    public void SetAdbEnabled() {
+        FDLog.d("SetAdbEnabled++");
         DevicePolicyManager manager = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
-        if(!manager.isDeviceOwnerApp(getApplicationContext().getPackageName())) return;
+        if (!manager.isDeviceOwnerApp(getApplicationContext().getPackageName())) return;
 
-        try
-        {
-            Settings.Global.putInt(getApplicationContext().getContentResolver(), Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,1);
+        try {
+            Settings.Global.putInt(getApplicationContext().getContentResolver(), Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 1);
             Settings.Global.putInt(getApplicationContext().getContentResolver(), Settings.Global.ADB_ENABLED, 1);
-        }
-        catch (Exception localException1)
-        {
+            Toast.makeText(getApplicationContext(), "adb opened", Toast.LENGTH_LONG);
+        } catch (Exception localException1) {
             localException1.printStackTrace();
         }
-        try
-        {
-            try
-            {
+        try {
+
+
+            Settings.Secure.putInt(getApplicationContext().getContentResolver(), "user_setup_complete", 1);
+            Settings.Global.putInt(getApplicationContext().getContentResolver(), "device_provisioned", 1);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        try {
+            try {
                 Settings.Global.putInt(getContentResolver(), Settings.Global.DEVICE_PROVISIONED, 1);
-                Settings.Secure.putInt(getContentResolver(),USER_SETUP_COMPLETE, 1);
-            }
-            catch (Exception localException2)
-            {
+                Settings.Secure.putInt(getContentResolver(), USER_SETUP_COMPLETE, 1);
+            } catch (Exception localException2) {
                 localException2.printStackTrace();
             }
-            if (manager != null)
-            {
-                manager.setSecureSetting(getComponentName(this),
-                        Settings.Secure.INSTALL_NON_MARKET_APPS,//install_nonmarket_apps
-                        "1");
-                manager.setGlobalSetting(
-                        // The ComponentName of the device owner
-                        getComponentName(this),
-                        // The settings to be set
-                        Settings.Global.ADB_ENABLED,
-                        // The value we write here is a string representation for SQLite
-                        "1");
-                if (Build.VERSION.SDK_INT >= 23)
-                    manager.setGlobalSetting(getComponentName(this), Settings.Global.STAY_ON_WHILE_PLUGGED_IN, "7");
+
+            try {
+                manager.setGlobalSetting(getComponentName(this), Settings.Global.ADB_ENABLED, "1");
+            } catch (Exception e) {
+
             }
-            return;
-        }
-        catch (Exception e)
-        {
+            if (Build.VERSION.SDK_INT >= 23) {
+                manager.setGlobalSetting(getComponentName(this), Settings.Global.STAY_ON_WHILE_PLUGGED_IN, "7");
+            }
+
+            manager.setSecureSetting(getComponentName(this),
+                    Settings.Secure.INSTALL_NON_MARKET_APPS,//install_nonmarket_apps
+                    "1");
+
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void releaseOwnership()
-    {
+    private void releaseOwnership() {
         try {
             DevicePolicyManager manager = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
             String PackageName = getPackageName();
@@ -232,26 +224,25 @@ public class InfoService extends Service {
             if (manager.isDeviceOwnerApp(PackageName)) {
                 ComponentName componentName = DeviceOwnerReceiver.getComponentName(getApplicationContext());
                 if (Build.VERSION.SDK_INT >= 24)
-                    Log.d("OwnerRemover", "Clearing profile owner");
-                Log.d("OwnerRemover", "Clearing device owner");
+                    FDLog.d("OwnerRemover", "Clearing profile owner");
+                FDLog.d("OwnerRemover", "Clearing device owner");
                 manager.removeActiveAdmin(componentName);
                 manager.clearDeviceOwnerApp(PackageName);
-                Log.d("OwnerRemover", "Device owner cleared succesfully");
+                FDLog.d("OwnerRemover", "Device owner cleared succesfully");
             } else {
-                Log.d("OwnerRemover", "App is not device owner");
+                FDLog.d("OwnerRemover", "App is not device owner");
             }
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private  void setAccessibilityService(){
+    private void setAccessibilityService() {
         try {
             if (Settings.Secure.getInt(getContentResolver(), Settings.Secure.ACCESSIBILITY_ENABLED, 0) == 0) {
                 String service = "com.fd.deviceadb/.MyAccessibilityService";
                 String sAA = Settings.Secure.getString(getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
-                Boolean bFound = false;
+                boolean bFound = false;
                 TextUtils.SimpleStringSplitter splitter = new TextUtils.SimpleStringSplitter(':');
                 if (!TextUtils.isEmpty(sAA)) {
                     splitter.setString(sAA);
@@ -267,8 +258,7 @@ public class InfoService extends Service {
                 }
                 Settings.Secure.putInt(getContentResolver(), Settings.Secure.ACCESSIBILITY_ENABLED, 1);
             }
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -281,21 +271,15 @@ public class InfoService extends Service {
             synchronized (USER_SETUP_COMPLETE) {
                 DevicePolicyManager manager = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
                 String PackageName = getPackageName();
-                if (!manager.isDeviceOwnerApp(PackageName)){
+                if (!manager.isDeviceOwnerApp(PackageName)) {
                     return "{}";
                 }
 
-                try {
-                    SetAdbEnabled();
-                    //setAppHidden(cntxt);
-                    StartHome(cntxt);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
                 JSONObject jsonParam = new JSONObject();
                 try {
-                    URL url = new URL("http://cmc.futuredial.com/ws/insert/");
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    HttpsTrustManager.allowAllSSL();
+                    URL url = new URL("https://cmc.futuredial.com/ws/insert/");
+                    HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
                     conn.setRequestMethod("POST");
                     conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
                     conn.setRequestProperty("Accept", "application/json");
@@ -314,15 +298,19 @@ public class InfoService extends Service {
                     jsonParam.put("nfcid", mNFCID);
                     TelephonyManager mTelephony = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
                     String sn = null;
-                    try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            sn = mTelephony.getImei();
-                        } else {
-                            sn = mTelephony.getDeviceId();
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+//                    try {
+//                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//                            if (ActivityCompat.checkSelfPermission(cntxt, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+//                                sn = mTelephony.getImei();
+//                            } else {
+//                                sn = mTelephony.getDeviceId();
+//                            }
+//                        } else {
+//                            sn = mTelephony.getDeviceId();
+//                        }
+//                    } catch (Exception e) {
+//                        e.printStackTrace();
+//                    }
                     jsonParam.put("esnNumber", sn == null ? "" : sn);
 
                     String address = WifiAddress.getMacAddress(getApplicationContext());
@@ -333,35 +321,46 @@ public class InfoService extends Service {
                     jsonParam.put("AndroidVersion", Build.VERSION.RELEASE);
                     jsonParam.put("buildnumber", Build.DISPLAY);
 
-                    Log.i("JSON", jsonParam.toString());
+                    FDLog.i("JSON", jsonParam.toString());
                     DataOutputStream os = new DataOutputStream(conn.getOutputStream());
                     os.writeBytes(jsonParam.toString());
 
                     os.flush();
                     os.close();
 
-                    Log.d("FDAIL", String.valueOf(conn.getResponseCode()));
-                    Log.d("FDAIL", conn.getResponseMessage());
+                    FDLog.d("FDAIL", String.valueOf(conn.getResponseCode()));
+                    FDLog.d("FDAIL", conn.getResponseMessage());
                     //SetAdbEnabled();
                     conn.disconnect();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
 
+                try {
+                    SetAdbEnabled();
+                    setAppHidden(cntxt);
+                    StartHome(cntxt);
+                    UtilityClass.runLauncherApp(cntxt);
+                    UtilityClass.launchSamsungHomeScreen(cntxt);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
                 //setAccessibilityService();
                 WifiAddress.RemoveWifi(getApplicationContext());
 
                 releaseOwnership();
 
-//            try{
-//                cntxt.stopSelf();
-//            }catch (Exception e){
-//
-//            }
-                //Intent I = new Intent("android.settings.APPLICATION_DEVELOPMENT_SETTINGS");
-                // getApplicationContext().startActivity(I);
-                //Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
-                //startActivity(intent);
+            /*
+           try{
+               cntxt.stopSelf();
+           }catch (Exception e){
+
+           }
+           Intent I = new Intent("android.settings.APPLICATION_DEVELOPMENT_SETTINGS");
+            getApplicationContext().startActivity(I);
+           Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+           startActivity(intent);
+           */
 
                 return jsonParam.toString();
             }
