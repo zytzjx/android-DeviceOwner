@@ -40,7 +40,7 @@ android {
 
     defaultConfig {
         minSdkVersion 22
-        targetSdkVersion 30
+        targetSdkVersion 31
         versionCode 103
         versionName "2.6.0.2"
     }
