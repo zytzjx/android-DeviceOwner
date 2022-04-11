@@ -46,7 +46,6 @@ public class ProvisioningModeActivity extends AppCompatActivity {
         finish();
     }
 
-
     @Override
     protected void onDestroy() {
 //        FDLog.d("PolicyComplianceActivity" + " => onDestroy");

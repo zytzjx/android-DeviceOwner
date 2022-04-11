@@ -39,9 +39,6 @@ import static android.app.admin.DevicePolicyManager.EXTRA_PROVISIONING_ADMIN_EXT
 
 public class AdminPolicyComplianceActivity extends AppCompatActivity {
 
-    private DevicePolicyManager manager = null;
-    private ComponentName componentName = null;
-    //    private Handler ServiceInfo;
     private final String TAG = "AdminPolicyCompliance";
 
     @Override
@@ -58,18 +55,7 @@ public class AdminPolicyComplianceActivity extends AppCompatActivity {
 
         FDLog.d(TAG + " => onCreate -> extras = " + extras);
 
-//        try {
-//            ServiceInfo = new Handler(Looper.getMainLooper());
-//        enableProvisionProfile(intent);
-//        } catch (Exception ex) {
-//            FDLog.e(TAG, "=> onCreate -> exception = " + ex.getLocalizedMessage());
-//        }
-
         setResult(RESULT_OK, intent);
-
-//        setResult(RESULT_OK, intent); //27.apk
-//        setResult(RESULT_OK, null); // 28.apk
-//        setResult(RESULT_OK, new Intent()); // 29.apk
 
         FDLog.d(TAG + " => onCreate -> end");
 
@@ -81,56 +67,4 @@ public class AdminPolicyComplianceActivity extends AppCompatActivity {
         FDLog.d(TAG + " => onDestroy");
         super.onDestroy();
     }
-
-    private void enableProvisionProfile(Intent intent) {
-        // Enable the profile
-        FDLog.d(TAG + " => enableProvisionProfile");
-        if (manager == null) {
-            manager = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
-        }
-        if (componentName == null) {
-            componentName = getComponentName();
-        }
-
-        if (!manager.isDeviceOwnerApp(getPackageName())) {
-            FDLog.d(TAG + "enableProvisionProfile => not device owner => componentName = " + componentName);
-            FDLog.d(TAG + "enableProvisionProfile => not device owner => packageName = " + getPackageName());
-            return;
-        }
-
-        FDLog.d(TAG + "enableProvisionProfile => device owner => componentName = " + componentName);
-
-//        EnablePermission(context);
-        try {
-            manager.setProfileName(componentName, getString(R.string.profile_name));
-        } catch (Exception ex) {
-            FDLog.d(TAG + " => enableProvisionProfile => exception 1 = " + ex.getLocalizedMessage());
-            ex.printStackTrace();
-        }
-        FDLog.d(TAG + " => enableProvisionProfile => componentName");
-//        Toast.makeText(this, "adb complete", Toast.LENGTH_LONG).show();
-        // Open the main screen
-//        PersistableBundle extras = intent.getParcelableExtra(
-//                EXTRA_PROVISIONING_ADMIN_EXTRAS_BUNDLE);
-
-//        FDLog.d(TAG + " => enableProvisionProfile => StartInfoSrv");
-//        StartInfoSrv(extras);
-    }
-//
-//    private void StartInfoSrv(final PersistableBundle extras) {
-//        FDLog.d(TAG + "StartInfoSrv ++");
-//        ServiceInfo.postDelayed(() -> {
-//                    Intent localIntent = new Intent(AdminPolicyComplianceActivity.this, InfoService.class);
-//                    if (extras != null) {
-//                        localIntent.putExtra("tags", extras);
-//                    }
-//                    if (Build.VERSION.SDK_INT >= 26) {
-//                        startForegroundService(localIntent);
-//                        //return;
-//                    }
-//                    startService(localIntent);
-//                }
-//                , 3000);
-//        FDLog.d(TAG + "StartInfoSrv --");
-//    }
 }
