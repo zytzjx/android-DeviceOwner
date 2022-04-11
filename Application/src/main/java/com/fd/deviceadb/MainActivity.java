@@ -24,11 +24,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.PersistableBundle;
 import android.provider.Settings;
+
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 import androidx.appcompat.app.AppCompatActivity;
+
 import android.telephony.TelephonyManager;
 
 import org.json.JSONObject;
@@ -43,7 +47,7 @@ import javax.net.ssl.HttpsURLConnection;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = "FDIAL";
+    private static final String TAG = "MainActivity";
     private static String mSite = "";
     private static String mCompany = "";
     private static String mNFCID = "";
@@ -51,13 +55,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main_real);
+        FDLog.d(TAG + " => onCreate => " + DeviceOwnerReceiver.getComponentName(getApplicationContext()));
+        FDLog.d(TAG + " => onCreate => " + getPackageName());
 //        UserManager mUserManager;
 
         if (savedInstanceState == null) {
@@ -250,5 +255,4 @@ public class MainActivity extends AppCompatActivity {
                 .replace(R.id.container, fragment)
                 .commit();
     }
-
 }

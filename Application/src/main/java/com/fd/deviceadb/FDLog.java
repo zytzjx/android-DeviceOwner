@@ -16,6 +16,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+
 import android.os.AsyncTask;
 
 public class FDLog {
@@ -54,45 +55,46 @@ public class FDLog {
         FILE_DEBUG = file_Debug;
     }
 
-    private static final  int port = 8888;
-    private static final  String ip = "192.168.75.8";
+    //    private static final int port = 8888;
+//    private static final String ip = "192.168.75.8";
+    private static final int port = 9000;
+    private static final String ip = "192.168.1.101";
 
 
-    public static class UDPClient extends AsyncTask<String, String, String>{
+    public static class UDPClient extends AsyncTask<String, String, String> {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
         }
+
         @Override
-        protected String doInBackground(String... params)
-        {
+        protected String doInBackground(String... params) {
             String str = params[0];
             DatagramSocket ds = null;
-            try
-            {
+            try {
                 ds = new DatagramSocket();
                 InetAddress sendAddress = InetAddress.getByName(ip);
                 DatagramPacket dp;
                 dp = new DatagramPacket(str.getBytes(), str.length(), sendAddress, port);
-                ds.send(dp);
-            }
-            catch (Exception e)
-            {
+//                ds.send(dp);
+            } catch (Exception e) {
                 e.printStackTrace();
             }
             return "";
         }
-        protected void onPostExecute(String result)
-        {
+
+        protected void onPostExecute(String result) {
             super.onPostExecute(result);
         }
     }
 
     public static class ClientSend implements Runnable {
-        private  volatile  String s;
-        public ClientSend(String ss){
+        private volatile String s;
+
+        public ClientSend(String ss) {
             s = ss;
         }
+
         @Override
         public void run() {
             if (TextUtils.isEmpty(s)) {
@@ -112,14 +114,15 @@ public class FDLog {
         }
 
     }
-    public static  void SendLog(String s){
+
+    public static void SendLog(String s) {
         if (!UDP_DEBUG) return;
         if (TextUtils.isEmpty(s)) {
             return;
         }
+//        logs = logs + s;
         new UDPClient().execute(s);
     }
-
 
 
     public static void d(String message) {
@@ -129,7 +132,6 @@ public class FDLog {
         if (FILE_DEBUG) {
             writeToFile(TAG, message);
         }
-
         SendLog(message);
     }
 
@@ -140,6 +142,7 @@ public class FDLog {
         if (FILE_DEBUG) {
             writeToFile(TAG, message);
         }
+
         SendLog(message);
     }
 
@@ -157,6 +160,7 @@ public class FDLog {
         if (FILE_DEBUG) {
             writeToFile(tag, message);
         }
+
         SendLog(message);
     }
 
@@ -167,6 +171,7 @@ public class FDLog {
         if (FILE_DEBUG) {
             writeToFile(tag, message);
         }
+
         SendLog(message);
     }
 

@@ -1,5 +1,6 @@
 package com.fd.deviceadb;
 
+import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.Service;
 import android.app.admin.DevicePolicyManager;
@@ -10,10 +11,18 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.PersistableBundle;
 import android.provider.Settings;
+
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.app.ActivityCompat;
+
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.widget.Toast;
@@ -27,10 +36,13 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.net.ssl.HttpsURLConnection;
 
 
+import static androidx.activity.result.ActivityResultCallerKt.registerForActivityResult;
 import static com.fd.deviceadb.DeviceOwnerReceiver.getComponentName;
 
 public class InfoService extends Service {
@@ -52,7 +64,7 @@ public class InfoService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-
+        FDLog.d(TAG + " => onCreate");
         PersistableBundle extras = intent.getParcelableExtra(
                 "tags");
         if (extras != null) {
@@ -61,21 +73,122 @@ public class InfoService extends Service {
             mNFCID = extras.getString("nfid", "");
         }
         Toast.makeText(this, "start service", Toast.LENGTH_LONG).show();
+
         FDLog.d("new ReportInfo().execute   ");
-        new ReportInfo().execute("");
+//      //async task is deprecated so removing it
+//        new ReportInfo().execute("");
+        startReportInfo();
+
         return super.onStartCommand(intent, flags, startId);
     }
 
-    private void StartHome(Context context) {
-        try {
-            Intent localIntent = new Intent(Intent.ACTION_MAIN);
-            localIntent.addCategory(Intent.CATEGORY_HOME);
-            localIntent.setFlags(Intent.FLAG_RECEIVER_FOREGROUND);
-            context.startActivity(localIntent);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    private void startReportInfo() {
+        FDLog.e(TAG, "startReportInfo");
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            FDLog.e(TAG, "doInBackground");
+            DevicePolicyManager manager = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
+            String PackageName = getPackageName();
+            if (!manager.isDeviceOwnerApp(PackageName)) {
+                FDLog.e(TAG, "doInBackground => not isDeviceOwnerApp");
+                return;
+            }
+
+            JSONObject jsonParam = new JSONObject();
+            try {
+                HttpsTrustManager.allowAllSSL();
+                URL url = new URL("https://cmc.futuredial.com/ws/insert/");
+                HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
+                conn.setRequestProperty("Accept", "application/json");
+                conn.setDoOutput(true);
+                conn.setDoInput(true);
+
+                // JSONObject jsonParam = new JSONObject();
+                jsonParam.put("uuid", UUID.randomUUID().toString().replace("-", ""));
+                jsonParam.put("timeCreated", new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSS'Z'").format(new Date()));
+                jsonParam.put("StartTime", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+                jsonParam.put("site", mSite);
+                jsonParam.put("company", mCompany);
+                jsonParam.put("operator", "");
+                jsonParam.put("productid", "34");
+                jsonParam.put("errorCode", "1");
+                jsonParam.put("nfcid", mNFCID);
+                TelephonyManager mTelephony = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+                String sn = null;
+                jsonParam.put("esnNumber", sn == null ? "" : sn);
+
+                String address = WifiAddress.getMacAddress(getApplicationContext());
+                jsonParam.put("MacAddress", address);
+                jsonParam.put("sourceMake", Build.MANUFACTURER);
+                jsonParam.put("sourceModel", Build.MODEL);
+                jsonParam.put("serialnumber", Build.SERIAL);
+                jsonParam.put("AndroidVersion", Build.VERSION.RELEASE);
+                jsonParam.put("buildnumber", Build.DISPLAY);
+
+                FDLog.i("JSON", jsonParam.toString());
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+
+                os.flush();
+                os.close();
+
+                FDLog.d("FDAIL", String.valueOf(conn.getResponseCode()));
+                FDLog.d("FDAIL", conn.getResponseMessage());
+                conn.disconnect();
+            } catch (Exception e) {
+                FDLog.e(TAG, "doInBackground => Exception = " + e.getLocalizedMessage());
+                e.printStackTrace();
+            }
+
+            try {
+                SetAdbEnabled();
+                setAppHidden(cntxt);
+                StartHome(cntxt);
+                UtilityClass.runLauncherApp(cntxt);
+                UtilityClass.launchSamsungHomeScreen(cntxt);
+            } catch (Exception e) {
+                FDLog.e(TAG, "doInBackground => Exception 2 = " + e.getLocalizedMessage());
+                e.printStackTrace();
+            }
+//            setAccessibilityService();
+            WifiAddress.RemoveWifi(getApplicationContext());
+
+            FDLog.e(TAG, "doInBackground => before releaseOwnership");
+            releaseOwnership();
+            FDLog.e(TAG, "doInBackground => after releaseOwnership");
+        });
+
+        FDLog.e(TAG, "startReportInfo -> end");
     }
+
+    private void StartHome(Context context) {
+//        try {
+//            Intent localIntent = new Intent(Intent.ACTION_MAIN);
+//            localIntent.addCategory(Intent.CATEGORY_HOME);
+//            localIntent.setFlags(Intent.FLAG_RECEIVER_FOREGROUND);
+//            context.startActivity(localIntent);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+        Intent localIntent = new Intent(Intent.ACTION_MAIN);
+        localIntent.addCategory(Intent.CATEGORY_HOME);
+        localIntent.setFlags(Intent.FLAG_RECEIVER_FOREGROUND);
+//        someActivityResultLauncher.launch(localIntent);
+    }
+
+//    ActivityResultLauncher<Intent> someActivityResultLauncher = registerForActivityResult(
+//            new ActivityResultContracts.StartActivityForResult(),
+//            new ActivityResultCallback<ActivityResult>() {
+//                @Override
+//                public void onActivityResult(ActivityResult result) {
+//                    if (result.getResultCode() == Activity.RESULT_OK) {
+//                        // There are no request codes
+//                        Intent data = result.getData();
+//                    }
+//                }
+//            });
 
     public static boolean CheckPackageExist(String paname, Context context) {
         try {
@@ -184,7 +297,6 @@ public class InfoService extends Service {
         }
         try {
 
-
             Settings.Secure.putInt(getApplicationContext().getContentResolver(), "user_setup_complete", 1);
             Settings.Global.putInt(getApplicationContext().getContentResolver(), "device_provisioned", 1);
         } catch (Exception e) {
@@ -218,21 +330,32 @@ public class InfoService extends Service {
 
     private void releaseOwnership() {
         try {
-            DevicePolicyManager manager = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
+            DevicePolicyManager manager = (DevicePolicyManager) getApplicationContext().getSystemService(Context.DEVICE_POLICY_SERVICE);
             String PackageName = getPackageName();
 
             if (manager.isDeviceOwnerApp(PackageName)) {
                 ComponentName componentName = DeviceOwnerReceiver.getComponentName(getApplicationContext());
                 if (Build.VERSION.SDK_INT >= 24)
                     FDLog.d("OwnerRemover", "Clearing profile owner");
+                try {
+                    manager.removeActiveAdmin(componentName);
+                } catch (Exception ex) {
+                    FDLog.d("OwnerRemover", "Exception 2 = " + ex.getLocalizedMessage());
+                    ex.printStackTrace();
+                }
                 FDLog.d("OwnerRemover", "Clearing device owner");
-                manager.removeActiveAdmin(componentName);
-                manager.clearDeviceOwnerApp(PackageName);
-                FDLog.d("OwnerRemover", "Device owner cleared succesfully");
+                try {
+                    manager.clearDeviceOwnerApp(PackageName);
+                } catch (Exception ex) {
+                    FDLog.d("OwnerRemover", "Exception 1 = " + ex.getLocalizedMessage());
+                    ex.printStackTrace();
+                }
+                FDLog.d("OwnerRemover", "Device owner cleared successfully");
             } else {
                 FDLog.d("OwnerRemover", "App is not device owner");
             }
         } catch (Exception e) {
+            FDLog.d("OwnerRemover", "Exception = " + e.getLocalizedMessage());
             e.printStackTrace();
         }
     }
@@ -263,15 +386,16 @@ public class InfoService extends Service {
         }
     }
 
-
     class ReportInfo extends AsyncTask<String, Void, String> {
 
         @Override
         protected String doInBackground(String... strings) {
             synchronized (USER_SETUP_COMPLETE) {
+                FDLog.e(TAG, "doInBackground");
                 DevicePolicyManager manager = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
                 String PackageName = getPackageName();
                 if (!manager.isDeviceOwnerApp(PackageName)) {
+                    FDLog.e(TAG, "doInBackground => not isDeviceOwnerApp");
                     return "{}";
                 }
 
@@ -339,6 +463,7 @@ public class InfoService extends Service {
                 try {
                     SetAdbEnabled();
                     setAppHidden(cntxt);
+
                     StartHome(cntxt);
                     UtilityClass.runLauncherApp(cntxt);
                     UtilityClass.launchSamsungHomeScreen(cntxt);
@@ -348,7 +473,9 @@ public class InfoService extends Service {
                 //setAccessibilityService();
                 WifiAddress.RemoveWifi(getApplicationContext());
 
+                FDLog.e(TAG, "doInBackground => before releaseOwnership");
                 releaseOwnership();
+                FDLog.e(TAG, "doInBackground => after releaseOwnership");
 
             /*
            try{

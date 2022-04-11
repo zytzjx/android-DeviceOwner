@@ -40,7 +40,8 @@ public class UtilityClass {
     public static final String notiKnoxNotClearContentTitle = "Knox is active";
     public static final String notiKnoxNotClearContentText = "Device is not ready to use.";
     public static final int NOTIFICATION_ID = 8001;
-    private  static String TAG="deviceadb";
+    private static String TAG = "deviceadb";
+
     public static void setNotificationChannel(NotificationManager mNotifyMgr) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = mNotifyMgr.getNotificationChannel(NOTIFICATION_CHANNEL_ID);
@@ -54,7 +55,6 @@ public class UtilityClass {
             }
         }
     }
-
 
 
     public static boolean isNotificationVisible(Context context) {
@@ -71,13 +71,13 @@ public class UtilityClass {
         return false;
     }
 
-    public static boolean isServiceRunning(Context context, String serviceClassName){
+    public static boolean isServiceRunning(Context context, String serviceClassName) {
         final ActivityManager activityManager = (ActivityManager) context.getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
         final List<ActivityManager.RunningServiceInfo> services = activityManager.getRunningServices(Integer.MAX_VALUE);
 
         for (ActivityManager.RunningServiceInfo runningServiceInfo : services) {
-            FDLog.d(TAG,"services class name : "+runningServiceInfo.service.getClassName());
-            if (runningServiceInfo.service.getClassName().equals(serviceClassName)){
+            FDLog.d(TAG, "services class name : " + runningServiceInfo.service.getClassName());
+            if (runningServiceInfo.service.getClassName().equals(serviceClassName)) {
                 return true;
             }
         }
@@ -133,8 +133,8 @@ public class UtilityClass {
     }
 
 
-
     public static void setBooleanGlobalSetting(Context context, String setting, boolean value) {
+        FDLog.d("UtilityClass" + " => onCreate => setBooleanGlobalSetting");
         DevicePolicyManager mDevicePolicyManager = (DevicePolicyManager) context.getSystemService(Context.DEVICE_POLICY_SERVICE);
         mDevicePolicyManager.setGlobalSetting(DeviceOwnerReceiver.getComponentName(context), setting, value ? "1" : "0");
     }
@@ -147,7 +147,7 @@ public class UtilityClass {
                 Settings.Secure.putInt(context.getApplicationContext().getContentResolver(), Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 1);
                 Settings.Secure.putInt(context.getApplicationContext().getContentResolver(), Settings.Global.ADB_ENABLED, 1);
             } catch (Exception e) {
-                FDLog.d(TAG,"enableADBWithDeviceManager exception  >>>> " + e.getMessage());
+                FDLog.d(TAG, "enableADBWithDeviceManager exception  >>>> " + e.getMessage());
             }
             try {
 
@@ -155,7 +155,7 @@ public class UtilityClass {
                 Settings.Secure.putInt(context.getApplicationContext().getContentResolver(), "user_setup_complete", 1);
                 Settings.Global.putInt(context.getApplicationContext().getContentResolver(), "device_provisioned", 1);
             } catch (Exception e) {
-                FDLog.d(TAG,e.getMessage());
+                FDLog.d(TAG, e.getMessage());
             }
             if (mDevicePolicyManager != null) {
                 UtilityClass.setBooleanGlobalSetting(context, Settings.Global.ADB_ENABLED, true);
@@ -175,7 +175,7 @@ public class UtilityClass {
 
 
     public static void enableApps(Context context) {
-        Log.d(TAG,"enableApps called    ");
+        Log.d(TAG, "enableApps called    ");
         DevicePolicyManager dpm = (DevicePolicyManager) context.getSystemService(Context.DEVICE_POLICY_SERVICE);
         ComponentName cName = DeviceOwnerReceiver.getComponentName(context);
         dpm.setApplicationHidden(cName, "com.google.android.setupwizard", false);
@@ -184,25 +184,25 @@ public class UtilityClass {
 
 
     public static void disableDeviceAdminOwnerPrivilage(Context context) {
-        Log.d(TAG,"disableDeviceAdminOwnerPrivilage started ");
+        Log.d(TAG, "disableDeviceAdminOwnerPrivilage started ");
         //  enableApps(context);
         try {
-            Log.d(TAG,"disableDeviceAdminOwnerPrivilage called ");
+            Log.d(TAG, "disableDeviceAdminOwnerPrivilage called ");
             ComponentName componentName = DeviceOwnerReceiver.getComponentName(context);
             DevicePolicyManager dpm = (DevicePolicyManager) context.getSystemService(Context.DEVICE_POLICY_SERVICE);
             if (dpm.isDeviceOwnerApp("com.example.placeholder.test")) {
-                FDLog.d(TAG,"Revoked all the privilages");
+                FDLog.d(TAG, "Revoked all the privilages");
                 dpm.removeActiveAdmin(componentName);
                 dpm.clearDeviceOwnerApp("com.example.placeholder.test");
             }
             if (dpm != null && dpm.isAdminActive(DeviceOwnerReceiver.getComponentName(context))) {
                 dpm.removeActiveAdmin(componentName);
                 dpm.clearDeviceOwnerApp("com.example.placeholder.test");
-                FDLog.d(TAG,"Revoked Admin previlages");
+                FDLog.d(TAG, "Revoked Admin previlages");
             }
 
         } catch (Exception e) {
-            FDLog.e(TAG,"Exception while revoke admin privilage " + e.getMessage());
+            FDLog.e(TAG, "Exception while revoke admin privilage " + e.getMessage());
         }
     }
 
@@ -245,6 +245,7 @@ public class UtilityClass {
     }
 
     public static void runLauncherApp(Context context) {
+        FDLog.d("UtilityClass" + " => onCreate => runLauncherApp");
         try {
             Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
             mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
@@ -292,6 +293,7 @@ public class UtilityClass {
     }
 
     public static void launchSamsungHomeScreen(Context context) {
+        FDLog.d("UtilityClass" + " => onCreate => launchSamsungHomeScreen");
         try {
             final String value = NFCPreference.getValue(context, NFCPreference.PREFES_KEY_RESPONSE_SUCCESS);
             if (TextUtils.isEmpty(value)) {
@@ -316,49 +318,50 @@ public class UtilityClass {
 
         UtilityClass.setBooleanGlobalSetting(context, Settings.Global.WIFI_DEVICE_OWNER_CONFIGS_LOCKDOWN, false);
 
-        FDLog.d(TAG,"forgetting wifi");
+        FDLog.d(TAG, "forgetting wifi");
         WifiManager wm = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         List<WifiConfiguration> networks = wm.getConfiguredNetworks();
         try {
-            Log.d(TAG,"forgetting wifi 11 networks " + networks);
+            Log.d(TAG, "forgetting wifi 11 networks " + networks);
             for (WifiConfiguration config : networks) {
                 try {
-                    FDLog.d(TAG,"forgetting wifi 22");
+                    FDLog.d(TAG, "forgetting wifi 22");
 
                     wm.removeNetwork(config.networkId);
                     wm.saveConfiguration();
-                    FDLog.d(TAG,"forgetting wifi 33");
+                    FDLog.d(TAG, "forgetting wifi 33");
                 } catch (Exception e) {
-                    FDLog.e(TAG,"forgetwifi Exception: " + e.getMessage());
-                    FDLog.e(TAG,e.getMessage());
+                    FDLog.e(TAG, "forgetwifi Exception: " + e.getMessage());
+                    FDLog.e(TAG, e.getMessage());
                 }
             }
         } catch (Exception e) {
-            FDLog.e(TAG,e.getMessage());
+            FDLog.e(TAG, e.getMessage());
         }
         forgotWifiCredentials(context);
         //setWifiState(false, context.getApplicationContext());
-        FDLog.d(TAG,"forgetting wifi 44");
+        FDLog.d(TAG, "forgetting wifi 44");
     }
 
     @TargetApi(29)
     private static void forgotWifiCredentials(Context context) {
+        FDLog.d("UtilityClass" + " => onCreate => forgotWifiCredentials");
         WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         try {
-            FDLog.d(TAG,"forgotWifiCredentials ");
+            FDLog.d(TAG, "forgotWifiCredentials ");
 
             int networkId = wifiManager.getConnectionInfo().getNetworkId();
             wifiManager.removeNetwork(networkId);
             wifiManager.saveConfiguration();
-            FDLog.d(TAG,"forgotWifiCredentials Removed successfully ! ");
+            FDLog.d(TAG, "forgotWifiCredentials Removed successfully ! ");
 
         } catch (Exception e) {
-            FDLog.d(TAG,"Exception forgotWifiCredentials Removed android 10  " + e.getMessage());
+            FDLog.d(TAG, "Exception forgotWifiCredentials Removed android 10  " + e.getMessage());
         }
 
         try {
 
-            FDLog.d(TAG,"forgotWifiCredentials Removed android 10  ");
+            FDLog.d(TAG, "forgotWifiCredentials Removed android 10  ");
             WifiNetworkSuggestion.Builder wifiNetworkSuggestionBuilder1 = new WifiNetworkSuggestion.Builder();
             wifiNetworkSuggestionBuilder1.setSsid("testing");
             // wifiNetworkSuggestionBuilder1.setWpa2Passphrase("abcd1234");
@@ -368,11 +371,11 @@ public class UtilityClass {
             List<WifiNetworkSuggestion> list = new ArrayList<>();
             list.add(wifiNetworkSuggestion);
             wifiManager.removeNetworkSuggestions(list);
-            FDLog.d(TAG,"forgotWifiCredentials Removed android 10  completed  ");
+            FDLog.d(TAG, "forgotWifiCredentials Removed android 10  completed  ");
 
 
         } catch (Exception e) {
-            FDLog.d(TAG,"Exception 2 forgotWifiCredentials Removed android 10  " + e.getMessage());
+            FDLog.d(TAG, "Exception 2 forgotWifiCredentials Removed android 10  " + e.getMessage());
         }
     }
 }

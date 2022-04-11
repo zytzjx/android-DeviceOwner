@@ -50,6 +50,7 @@ public class DeviceOwnerFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
+        FDLog.d("DeviceOwnerFragment" + " => onCreate");
     }
 
     @Nullable

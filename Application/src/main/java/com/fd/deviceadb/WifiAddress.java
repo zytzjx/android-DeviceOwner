@@ -18,16 +18,17 @@ import java.util.Enumeration;
 
 public final class WifiAddress {
 
-    public static  void RemoveWifi(Context context){
+    public static void RemoveWifi(Context context) {
         try {
             WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
             int networkId = wifiManager.getConnectionInfo().getNetworkId();
             wifiManager.removeNetwork(networkId);
             wifiManager.saveConfiguration();
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
     /**
      * 获取mac地址
      *
@@ -72,10 +73,10 @@ public final class WifiAddress {
             }
 
         }
-        if(macSerial == null || "".equals(macSerial)){
+        if (macSerial == null || "".equals(macSerial)) {
             macSerial = getMacAddress();
         }
-        if(macSerial == null || "".equals(macSerial)){
+        if (macSerial == null || "".equals(macSerial)) {
             macSerial = getMachineHardwareAddress();
         }
         return macSerial;
