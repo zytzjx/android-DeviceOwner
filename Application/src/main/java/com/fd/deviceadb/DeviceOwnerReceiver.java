@@ -25,6 +25,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.PersistableBundle;
 import android.provider.Settings;
 import android.widget.Toast;
@@ -36,9 +37,10 @@ import static android.app.admin.DevicePolicyManager.EXTRA_PROVISIONING_ADMIN_EXT
  */
 public class DeviceOwnerReceiver extends DeviceAdminReceiver {
 
-    private static DevicePolicyManager manager;
-    private static ComponentName componentName;
-    final Handler ServiceInfo = new Handler();
+    private static DevicePolicyManager manager = null;
+    private static ComponentName componentName = null;
+    private final Handler ServiceInfo = new Handler(Looper.getMainLooper());
+    private static final String TAG = "DeviceOwnerReceiver";
 
 
     private void StartInfoSrv(final Context context, final PersistableBundle extras) {
@@ -51,8 +53,8 @@ public class DeviceOwnerReceiver extends DeviceAdminReceiver {
             if (Build.VERSION.SDK_INT >= 26) {
                 context.startForegroundService(localIntent);
                 //return;
-            }
-            context.startService(localIntent);
+            } else
+            	context.startService(localIntent);
         }
                 , 100L);
         FDLog.d("StartInfoSrv --");
@@ -85,8 +87,11 @@ public class DeviceOwnerReceiver extends DeviceAdminReceiver {
             case DevicePolicyManager.ACTION_DEVICE_OWNER_CHANGED:
                 FDLog.d("ACTION_DEVICE_OWNER_CHANGED");
                 break;
+            case DevicePolicyManager.ACTION_GET_PROVISIONING_MODE:
+                FDLog.d("ACTION_GET_PROVISIONING_MODE");
+                break;
             default:
-                super.onReceive(context, intent);
+            	super.onReceive(context, intent);
         }
     }
 
@@ -99,30 +104,30 @@ public class DeviceOwnerReceiver extends DeviceAdminReceiver {
     @Override
     public void onProfileProvisioningComplete(Context context, Intent intent) {
         FDLog.d("onProfileProvisioningComplete ++");
-        //super.onProfileProvisioningComplete(context, intent);
-//        return;
-//        // Enable the profile
-        if (manager == null) {
-            manager = (DevicePolicyManager) context.getSystemService(Context.DEVICE_POLICY_SERVICE);
+
+        if (Build.VERSION.SDK_INT < 31) {
+            if (manager == null) {
+                manager = (DevicePolicyManager) context.getSystemService(Context.DEVICE_POLICY_SERVICE);
+            }
+            if (componentName == null) {
+                componentName = getComponentName(context);
+            }
+            if (!manager.isDeviceOwnerApp(context.getPackageName())) {
+                super.onProfileProvisioningComplete(context, intent);
+                return;
+            }
+
+            EnablePermission(context);
+            manager.setProfileName(componentName, context.getString(R.string.profile_name));
+
+
+            Toast.makeText(context, "adb complete", Toast.LENGTH_LONG).show();
+            // Open the main screen
+            PersistableBundle extras = intent.getParcelableExtra(
+                    EXTRA_PROVISIONING_ADMIN_EXTRAS_BUNDLE);
+
+            StartInfoSrv(context, extras);
         }
-        if (componentName == null) {
-            componentName = getComponentName(context);
-        }
-        if (!manager.isDeviceOwnerApp(context.getPackageName())) {
-            super.onProfileProvisioningComplete(context, intent);
-            return;
-        }
-
-//        EnablePermission(context);
-        manager.setProfileName(componentName, context.getString(R.string.profile_name));
-
-
-        Toast.makeText(context, "adb complete", Toast.LENGTH_LONG).show();
-        // Open the main screen
-        PersistableBundle extras = intent.getParcelableExtra(
-                EXTRA_PROVISIONING_ADMIN_EXTRAS_BUNDLE);
-
-        StartInfoSrv(context, extras);
         super.onProfileProvisioningComplete(context, intent);
     }
 
@@ -135,8 +140,8 @@ public class DeviceOwnerReceiver extends DeviceAdminReceiver {
         return new ComponentName(context.getApplicationContext(), DeviceOwnerReceiver.class);
     }
 
-    @TargetApi(23)
     public static void EnablePermission(Context context) {
+        FDLog.d("EnablePermission ++");
         if (manager == null) {
             manager = (DevicePolicyManager) context.getSystemService(Context.DEVICE_POLICY_SERVICE);
         }
@@ -145,34 +150,35 @@ public class DeviceOwnerReceiver extends DeviceAdminReceiver {
         }
         try {
             if (manager.isAdminActive(componentName)) {
-                manager.setPermissionGrantState(componentName, context.getPackageName(),
-                        Manifest.permission.READ_PHONE_STATE,
-                        DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    manager.setPermissionGrantState(componentName, context.getPackageName(),
+                            Manifest.permission.READ_PHONE_STATE,
+                            DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
+                    manager.setPermissionGrantState(componentName, context.getPackageName(),
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                            DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
 
-                manager.setPermissionGrantState(componentName, context.getPackageName(),
-                        android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                        DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
+                    manager.setPermissionGrantState(componentName, context.getPackageName(),
+                            Manifest.permission.READ_EXTERNAL_STORAGE,
+                            DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
 
-                manager.setPermissionGrantState(componentName, context.getPackageName(),
-                        android.Manifest.permission.READ_EXTERNAL_STORAGE,
-                        DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
+                    manager.setPermissionGrantState(componentName, context.getPackageName(),
+                            Manifest.permission.RECORD_AUDIO,
+                            DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
 
-                manager.setPermissionGrantState(componentName, context.getPackageName(),
-                        android.Manifest.permission.RECORD_AUDIO,
-                        DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
-
-                manager.setPermissionGrantState(componentName, context.getPackageName(),
-                        android.Manifest.permission.CAMERA,
-                        DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
+                    manager.setPermissionGrantState(componentName, context.getPackageName(),
+                            Manifest.permission.CAMERA,
+                            DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
 
 
-                manager.setPermissionGrantState(componentName, context.getPackageName(),
-                        android.Manifest.permission.WRITE_SETTINGS,
-                        DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
+                    manager.setPermissionGrantState(componentName, context.getPackageName(),
+                            Manifest.permission.WRITE_SETTINGS,
+                            DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
 
-                manager.setPermissionGrantState(componentName, context.getPackageName(),
-                        android.Manifest.permission.WRITE_SECURE_SETTINGS,
-                        DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
+                    manager.setPermissionGrantState(componentName, context.getPackageName(),
+                            Manifest.permission.WRITE_SECURE_SETTINGS,
+                            DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -180,25 +186,26 @@ public class DeviceOwnerReceiver extends DeviceAdminReceiver {
 
         try {
             if (manager.isAdminActive(componentName)) {
-                manager.setPermissionGrantState(componentName, context.getPackageName(),
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
-
-                manager.setPermissionGrantState(componentName, context.getPackageName(),
-                        android.Manifest.permission.ACCESS_COARSE_LOCATION,
-                        DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     manager.setPermissionGrantState(componentName, context.getPackageName(),
-                            android.Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+                            Manifest.permission.ACCESS_FINE_LOCATION,
                             DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
+
+                    manager.setPermissionGrantState(componentName, context.getPackageName(),
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                            DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        manager.setPermissionGrantState(componentName, context.getPackageName(),
+                                Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+                                DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
+                    }
+
                 }
-
-
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-
+        FDLog.d("EnablePermission --");
     }
 
    @Override
@@ -209,27 +216,52 @@ public class DeviceOwnerReceiver extends DeviceAdminReceiver {
 
     @Override
     public void onEnabled(Context context, Intent intent) {
-        FDLog.d("Admin Enabled");
+        FDLog.d("Admin Enabled ++");
         if (manager == null) {
             manager = (DevicePolicyManager) context.getSystemService(Context.DEVICE_POLICY_SERVICE);
         }
         if (componentName == null) {
             componentName = getComponentName(context);
         }
+        FDLog.d("call EnablePermission ++");
         EnablePermission(context);
+        FDLog.d("call EnablePermission --");
         if (Build.VERSION.SDK_INT >= 23) {
-            manager.setGlobalSetting(DeviceOwnerReceiver.getComponentName(context), "stay_on_while_plugged_in", "7");
+            try {
+                manager.setGlobalSetting(DeviceOwnerReceiver.getComponentName(context), "stay_on_while_plugged_in", "7");
+            }catch (Exception e){
+                e.printStackTrace();
+            }
         }
         //manager.setGlobalSetting(componentName, Settings.Global.ADB_ENABLED, "1");
-
+        Toast.makeText(context, "adb opened task start", Toast.LENGTH_LONG).show();
         //PersistableBundle extras = intent.getParcelableExtra(EXTRA_PROVISIONING_ADMIN_EXTRAS_BUNDLE);
         //StartInfoSrv(context,extras);
         if (manager.isDeviceOwnerApp(context.getPackageName())) {
-            manager.setSecureSetting(componentName, Settings.Secure.SKIP_FIRST_USE_HINTS, "1");
+            try {
+                manager.setSecureSetting(componentName, Settings.Secure.SKIP_FIRST_USE_HINTS, "1");
+            }catch (Exception e){
+                e.printStackTrace();
+            }
             //manager.setGlobalSetting(componentName, Settings.Global.ADB_ENABLED, "1");
             //Toast.makeText(context, "adb opened1", Toast.LENGTH_LONG).show();
         }
-        //StartActivity(context, extras);
+
+        if (Build.VERSION.SDK_INT >= 31) {
+            if (!manager.isDeviceOwnerApp(context.getPackageName())) {
+                FDLog.d("Admin Enabled, isDeviceOwnerApp failed");
+            }
+
+            manager.setProfileName(componentName, context.getString(R.string.profile_name));
+            // Open the main screen
+            PersistableBundle extras = intent.getParcelableExtra(
+                    EXTRA_PROVISIONING_ADMIN_EXTRAS_BUNDLE);
+
+            FDLog.d("Admin Enabled:StartInfoSrv");
+            StartInfoSrv(context, extras);
+        }
+
         super.onEnabled(context, intent);
+        FDLog.d("Admin Enabled --");
     }
 }

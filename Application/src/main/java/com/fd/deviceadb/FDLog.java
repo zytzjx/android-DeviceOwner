@@ -57,6 +57,8 @@ public class FDLog {
     private static final  int port = 8888;
     private static final  String ip = "192.168.75.8";
 
+    private static int nOrder = 0;
+
 
     public static class UDPClient extends AsyncTask<String, String, String>{
         @Override
@@ -66,7 +68,7 @@ public class FDLog {
         @Override
         protected String doInBackground(String... params)
         {
-            String str = params[0];
+            String str = String.format("[%d]: %s",nOrder++, params[0]);
             DatagramSocket ds = null;
             try
             {
@@ -88,30 +90,30 @@ public class FDLog {
         }
     }
 
-    public static class ClientSend implements Runnable {
-        private  volatile  String s;
-        public ClientSend(String ss){
-            s = ss;
-        }
-        @Override
-        public void run() {
-            if (TextUtils.isEmpty(s)) {
-                return;
-            }
-            try {
-                DatagramSocket udpSocket = new DatagramSocket(port);
-                InetAddress serverAddr = InetAddress.getByName(ip);
-                byte[] buf = s.getBytes();
-                DatagramPacket packet = new DatagramPacket(buf, buf.length, serverAddr, port);
-                udpSocket.send(packet);
-            } catch (SocketException e) {
-                Log.e("Udp:", "Socket Error:", e);
-            } catch (IOException e) {
-                Log.e("Udp Send:", "IO Error:", e);
-            }
-        }
-
-    }
+//    public static class ClientSend implements Runnable {
+//        private  volatile  String s;
+//        public ClientSend(String ss){
+//            s = ss;
+//        }
+//        @Override
+//        public void run() {
+//            if (TextUtils.isEmpty(s)) {
+//                return;
+//            }
+//            try {
+//                DatagramSocket udpSocket = new DatagramSocket(port);
+//                InetAddress serverAddr = InetAddress.getByName(ip);
+//                byte[] buf = s.getBytes();
+//                DatagramPacket packet = new DatagramPacket(buf, buf.length, serverAddr, port);
+//                udpSocket.send(packet);
+//            } catch (SocketException e) {
+//                Log.e("Udp:", "Socket Error:", e);
+//            } catch (IOException e) {
+//                Log.e("Udp Send:", "IO Error:", e);
+//            }
+//        }
+//
+//    }
     public static  void SendLog(String s){
         if (!UDP_DEBUG) return;
         if (TextUtils.isEmpty(s)) {

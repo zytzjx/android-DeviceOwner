@@ -1,5 +1,6 @@
 package com.fd.deviceadb;
 
+import android.Manifest;
 import android.app.ActivityManager;
 import android.app.Service;
 import android.app.admin.DevicePolicyManager;
@@ -62,8 +63,60 @@ public class InfoService extends Service {
         }
         Toast.makeText(this, "start service", Toast.LENGTH_LONG).show();
         FDLog.d("new ReportInfo().execute   ");
-        new ReportInfo().execute("");
+//        if (Build.VERSION.SDK_INT<30) {
+//            new ReportInfo().execute("");
+//        }else{
+//            doSingleThead();
+//        }
+        doSingleThead();
         return super.onStartCommand(intent, flags, startId);
+    }
+
+    public String read_imei(){
+        try{
+            TelephonyManager tm = ((TelephonyManager) getSystemService(TELEPHONY_SERVICE));
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if(checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED){
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        String imei1 = tm.getImei(0);
+                        if (!TextUtils.isEmpty(imei1)){
+                            return imei1;
+                        }
+                        imei1 = tm.getImei(1);
+                        if (!TextUtils.isEmpty(imei1)){
+                            return imei1;
+                        }
+                        String meid1 = tm.getMeid(0);
+                        if (!TextUtils.isEmpty(meid1)){
+                            return meid1;
+                        }
+                        meid1 = tm.getMeid(1);
+                        if (!TextUtils.isEmpty(meid1)){
+                            return meid1;
+                        }
+                    } else {
+                        String id1 = tm.getDeviceId(0);
+                        if (!TextUtils.isEmpty(id1)){
+                            return id1;
+                        }
+                        String id2 = tm.getDeviceId(1);
+                        if (!TextUtils.isEmpty(id2)){
+                            return id2;
+                        }
+                    }
+                    return "";
+                }
+            }else{
+                String imei1 = tm.getDeviceId();
+                if (!TextUtils.isEmpty(imei1)){
+                    return imei1;
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return "";
     }
 
     private void StartHome(Context context) {
@@ -118,6 +171,7 @@ public class InfoService extends Service {
 
 
     public void setAppHidden(Context context) {
+        FDLog.d("setAppHidden ++");
         DevicePolicyManager manager = (DevicePolicyManager) context.getSystemService(Context.DEVICE_POLICY_SERVICE);
         ComponentName componentName = DeviceOwnerReceiver.getComponentName(context);
 
@@ -158,16 +212,21 @@ public class InfoService extends Service {
         String manufacturer = Build.MANUFACTURER;
         if (!TextUtils.isEmpty(manufacturer) && !manufacturer.equalsIgnoreCase("google")) {
             if (Build.VERSION.SDK_INT > 20) {
-                String mPackageName = null;
-                ActivityManager mActivityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-                if (mActivityManager != null && mActivityManager.getRunningAppProcesses() != null) {
-                    mPackageName = mActivityManager.getRunningAppProcesses().get(0).processName;
-                }
-                if (mPackageName != null && !mPackageName.contains("launcher")) {
-                    manager.setApplicationHidden(componentName, mPackageName, true);
+                try {
+                    String mPackageName = null;
+                    ActivityManager mActivityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+                    if (mActivityManager != null && mActivityManager.getRunningAppProcesses() != null) {
+                        mPackageName = mActivityManager.getRunningAppProcesses().get(0).processName;
+                    }
+                    if (mPackageName != null && !mPackageName.contains("launcher")) {
+                        manager.setApplicationHidden(componentName, mPackageName, true);
+                    }
+                }catch (Exception e){
+                    e.printStackTrace();
                 }
             }
         }
+        FDLog.d("setAppHidden --");
     }
 
     public void SetAdbEnabled() {
@@ -214,25 +273,35 @@ public class InfoService extends Service {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        FDLog.d("SetAdbEnabled--");
     }
 
     private void releaseOwnership() {
         try {
-            DevicePolicyManager manager = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
+            DevicePolicyManager manager = (DevicePolicyManager) getApplicationContext().getSystemService(Context.DEVICE_POLICY_SERVICE);
             String PackageName = getPackageName();
 
             if (manager.isDeviceOwnerApp(PackageName)) {
                 ComponentName componentName = DeviceOwnerReceiver.getComponentName(getApplicationContext());
                 if (Build.VERSION.SDK_INT >= 24)
                     FDLog.d("OwnerRemover", "Clearing profile owner");
+                try {
+                    manager.removeActiveAdmin(componentName);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
                 FDLog.d("OwnerRemover", "Clearing device owner");
-                manager.removeActiveAdmin(componentName);
-                manager.clearDeviceOwnerApp(PackageName);
-                FDLog.d("OwnerRemover", "Device owner cleared succesfully");
+                try {
+                    manager.clearDeviceOwnerApp(PackageName);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+                FDLog.d("OwnerRemover", "Device owner cleared successfully");
             } else {
                 FDLog.d("OwnerRemover", "App is not device owner");
             }
         } catch (Exception e) {
+            FDLog.d("OwnerRemover", "Exception = " + e.getLocalizedMessage());
             e.printStackTrace();
         }
     }
@@ -263,11 +332,106 @@ public class InfoService extends Service {
         }
     }
 
+    private  void doSingleThead(){
+        FDLog.d("doSingleThead ++");
+        java.util.concurrent.ExecutorService singleThreadPool = java.util.concurrent.Executors.newSingleThreadExecutor();
+        singleThreadPool.execute(()->{
+            FDLog.d("doSingleThead tast run");
+            DevicePolicyManager manager = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
+            String PackageName = getPackageName();
+            if (!manager.isDeviceOwnerApp(PackageName)) {
+                return ;
+            }
+            JSONObject jsonParam = new JSONObject();
+            try {
+                HttpsTrustManager.allowAllSSL();
+                URL url = new URL("https://cmc.futuredial.com/ws/insert/");
+                HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
+                conn.setRequestProperty("Accept", "application/json");
+                conn.setDoOutput(true);
+                conn.setDoInput(true);
+
+                // JSONObject jsonParam = new JSONObject();
+                jsonParam.put("uuid", UUID.randomUUID().toString().replace("-", ""));
+                jsonParam.put("timeCreated", new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSS'Z'").format(new Date()));
+                jsonParam.put("StartTime", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+                jsonParam.put("site", mSite);
+                jsonParam.put("company", mCompany);
+                jsonParam.put("operator", "");
+                jsonParam.put("productid", "34");
+                jsonParam.put("errorCode", "1");
+                jsonParam.put("nfcid", mNFCID);
+                TelephonyManager mTelephony = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+                String sn = read_imei();
+                jsonParam.put("esnNumber", sn == null ? "0123456789" : sn);
+
+                String address = WifiAddress.getMacAddress(getApplicationContext());
+                jsonParam.put("MacAddress", address);
+                jsonParam.put("sourceMake", Build.MANUFACTURER);
+                jsonParam.put("sourceModel", Build.MODEL);
+                jsonParam.put("serialnumber", Build.SERIAL);
+                jsonParam.put("AndroidVersion", Build.VERSION.RELEASE);
+                jsonParam.put("buildnumber", Build.DISPLAY);
+
+                FDLog.i("JSON", jsonParam.toString());
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+
+                os.flush();
+                os.close();
+
+                FDLog.d("FDAIL", String.valueOf(conn.getResponseCode()));
+                FDLog.d("FDAIL", conn.getResponseMessage());
+                //SetAdbEnabled();
+                conn.disconnect();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            try {
+                SetAdbEnabled();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            try {
+                setAppHidden(cntxt);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            try {
+                StartHome(cntxt);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            try {
+                UtilityClass.runLauncherApp(cntxt);
+                UtilityClass.launchSamsungHomeScreen(cntxt);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            //setAccessibilityService();
+            try {
+                WifiAddress.RemoveWifi(getApplicationContext());
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+
+            try {
+                releaseOwnership();
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+
+        });
+        FDLog.d("doSingleThead --");
+    }
 
     class ReportInfo extends AsyncTask<String, Void, String> {
-
         @Override
         protected String doInBackground(String... strings) {
+            FDLog.d("ReportInfo doInBackground");
             synchronized (USER_SETUP_COMPLETE) {
                 DevicePolicyManager manager = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
                 String PackageName = getPackageName();
@@ -297,21 +461,8 @@ public class InfoService extends Service {
                     jsonParam.put("errorCode", "1");
                     jsonParam.put("nfcid", mNFCID);
                     TelephonyManager mTelephony = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-                    String sn = null;
-//                    try {
-//                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//                            if (ActivityCompat.checkSelfPermission(cntxt, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
-//                                sn = mTelephony.getImei();
-//                            } else {
-//                                sn = mTelephony.getDeviceId();
-//                            }
-//                        } else {
-//                            sn = mTelephony.getDeviceId();
-//                        }
-//                    } catch (Exception e) {
-//                        e.printStackTrace();
-//                    }
-                    jsonParam.put("esnNumber", sn == null ? "" : sn);
+                    String sn = read_imei();
+                    jsonParam.put("esnNumber", sn == null ? "0123456789" : sn);
 
                     String address = WifiAddress.getMacAddress(getApplicationContext());
                     jsonParam.put("MacAddress", address);
@@ -338,17 +489,37 @@ public class InfoService extends Service {
 
                 try {
                     SetAdbEnabled();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                try {
                     setAppHidden(cntxt);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                try {
                     StartHome(cntxt);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                try {
                     UtilityClass.runLauncherApp(cntxt);
                     UtilityClass.launchSamsungHomeScreen(cntxt);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
                 //setAccessibilityService();
-                WifiAddress.RemoveWifi(getApplicationContext());
+                try {
+                    WifiAddress.RemoveWifi(getApplicationContext());
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
 
-                releaseOwnership();
+                try {
+                    releaseOwnership();
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
 
             /*
            try{

@@ -19,14 +19,17 @@ import java.util.Enumeration;
 public final class WifiAddress {
 
     public static  void RemoveWifi(Context context){
+        FDLog.d("RemoveWifi ++");
         try {
             WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
             int networkId = wifiManager.getConnectionInfo().getNetworkId();
             wifiManager.removeNetwork(networkId);
             wifiManager.saveConfiguration();
         }catch (Exception e){
+            FDLog.d("RemoveWifi:" + e.toString());
             e.printStackTrace();
         }
+        FDLog.d("RemoveWifi --");
     }
     /**
      * 获取mac地址
